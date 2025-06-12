@@ -1,25 +1,27 @@
 # 💡 scrolllock-wlroots-fix
 
-Fix para manter o LED do Scroll Lock aceso (ou piscando) em ambientes baseados em `wlroots` (Hyprland, Sway, etc), que bugam o controle de LEDs de teclado em alguns modelos (tipo o EMEET).  
-Esse script aqui resolve esse perrengue com um Pythonzinho maroto e um serviço `systemd` que liga junto com o sistema. Simples, direto e sem enrolação.
+Fix para manter o LED do Scroll Lock aceso (ou piscando) em ambientes baseados em **wlroots** (Hyprland, Sway, etc.), que podem bugar o controle de LEDs de teclado em alguns modelos (ex: EMEET).
+
+Este script Python junto com um serviço **systemd** resolvem o problema, ativando junto com o sistema. Simples, direto e na moral.
 
 ---
 
 ## 🧠 O Problema
 
-Alguns teclados (especialmente com layout ABNT ou teclas multimídia) ficam **sem o LED do Scroll Lock** funcional quando usamos ambientes gráficos com o **wlroots** (como o Hyprland ou Sway).  
-No Ubuntu e derivados, isso geralmente funciona de boas, mas no Arch ou qualquer distro mais crua... **puff, sumiu o LED!** 😵‍💫
+Alguns teclados (especialmente com layout ABNT ou teclas multimídia) podem ter o **LED do Scroll Lock inoperante** ao usar ambientes gráficos com **wlroots** (como Hyprland ou Sway).
 
-Então bolei esse esquema: um script que **força o estado do LED no device certo**, e sobe no boot com o `systemd`.
+Em distribuições tipo Ubuntu, geralmente funciona bem. Mas em sistemas mais “crus” como Arch Linux, o LED pode simplesmente não acender, deixando a galera na mão.
+
+Esse projeto oferece uma solução prática: um script que força o estado do LED no dispositivo correto e que é iniciado no boot via systemd.
 
 ---
 
-## ⚙️ O Que Esse Script Faz
+## ⚙️ O Que Este Script Faz
 
-1. Detecta e se conecta ao evento do teclado (`/dev/input/eventX`)
-2. Usa a lib `python-libevdev` pra forçar o Scroll Lock LED a acender
-3. Pode até piscar, se quiser um efeito boate (útil pra debug!)
-4. Fica rodando em loop se quiser, ou só dá um toggle e sai
+- Detecta e se conecta ao evento do teclado (`/dev/input/eventX`).
+- Usa a biblioteca `python-libevdev` para forçar o Scroll Lock LED a acender.
+- Permite configurar o LED para piscar, se quiser (ótimo para debug).
+- Pode rodar em loop contínuo ou só realizar o toggle e sair — você escolhe.
 
 ---
 
@@ -27,84 +29,90 @@ Então bolei esse esquema: um script que **força o estado do LED no device cert
 
 ### 1. Instale a dependência:
 
-No Arch/Manjaro:
-```bash
-sudo pacman -S python-libevdev
-No Debian/Ubuntu:
+**No Arch/Manjaro:**
 
-bash
-Copiar
-Editar
-sudo apt install python3-libevdev
-2. Clone este repositório:
-bash
-Copiar
-Editar
-git clone https://github.com/SEU-USUARIO/scrolllock-wlroots-fix.git
-cd scrolllock-wlroots-fix
-3. Teste o script manualmente
-bash
-Copiar
-Editar
-sudo python3 ledToggler.py /dev/input/event4 scrolllock scrolllock 1 1
-⚠️ Troque /dev/input/event4 pelo seu teclado real (descubra com sudo evtest ou ls /dev/input/by-id).
+    sudo pacman -S python-libevdev
 
-🛠️ Instalando como serviço (systemd)
-1. Copie o script pro sistema:
-bash
-Copiar
-Editar
-sudo mkdir -p /opt/scrolllock-wlroots-fix
-sudo cp ledToggler.py /opt/scrolllock-wlroots-fix/
-sudo chmod +x /opt/scrolllock-wlroots-fix/ledToggler.py
-2. Crie o serviço:
-bash
-Copiar
-Editar
-sudo nano /etc/systemd/system/scrolllock-led.service
-E cole:
+**No Debian/Ubuntu:**
 
-ini
-Copiar
-Editar
-[Unit]
-Description=Scroll Lock LED fix for EMEET Keyboard
-After=graphical.target
+    sudo apt install python3-libevdev
 
-[Service]
-Type=simple
-ExecStart=/usr/bin/python3 /opt/scrolllock-wlroots-fix/ledToggler.py /dev/input/event4 scrolllock scrolllock 1 1
-Restart=on-failure
+### 2. Clone o repositório:
 
-[Install]
-WantedBy=multi-user.target
-⚠️ Não esquece de trocar o event4 pelo seu real, beleza?
+    git clone https://github.com/silviodarko/scrolllock-wlroots-fix.git
+    cd scrolllock-wlroots-fix
 
-3. Ative e inicie o serviço
-bash
-Copiar
-Editar
-sudo systemctl daemon-reload
-sudo systemctl enable scrolllock-led.service
-sudo systemctl start scrolllock-led.service
-Quer saber se deu bom?
+### 3. Teste o script manualmente:
 
-bash
-Copiar
-Editar
-systemctl status scrolllock-led.service
-🧼 Desinstalar
-bash
-Copiar
-Editar
-sudo systemctl stop scrolllock-led.service
-sudo systemctl disable scrolllock-led.service
-sudo rm /etc/systemd/system/scrolllock-led.service
-sudo rm -rf /opt/scrolllock-wlroots-fix
-✨ Créditos
-Essa gambiarra abençoada surgiu da frustração de ver um LED apagado e do espírito livre do Linux.
-Feito com carinho por Silvada (a.k.a. Riquelab), com a ajuda espiritual do ChatGPT e o apoio moral da comunidade Arch 🐧.
+    sudo python3 ledToggler.py /dev/input/eventX scrolllock scrolllock 1 1
 
-Se te ajudou, dá um star aí ⭐ e espalha o Linux com alegria!
+⚠️ **Importante:** Troque `/dev/input/eventX` pelo identificador real do seu teclado (descubra com `sudo evtest` ou olhando em `/dev/input/by-id`).
 
-🐧 Viva o Linux! 🦾
+---
+
+## 🛠️ Instalando como Serviço (systemd)
+
+Para garantir que o fix rode automaticamente no boot:
+
+### 1. Copie o script para o sistema:
+
+    sudo mkdir -p /opt/scrolllock-wlroots-fix
+    sudo cp ledToggler.py /opt/scrolllock-wlroots-fix/
+    sudo chmod +x /opt/scrolllock-wlroots-fix/ledToggler.py
+
+### 2. Crie o arquivo do serviço systemd:
+
+    sudo nano /etc/systemd/system/scrolllock-led.service
+
+Cole o conteúdo abaixo no arquivo aberto:
+
+    [Unit]
+    Description=Scroll Lock LED fix for Keyboard
+    After=graphical.target network.target
+
+    [Service]
+    Type=simple
+    ExecStart=/usr/bin/python3 /opt/scrolllock-wlroots-fix/ledToggler.py /dev/input/eventX scrolllock scrolllock 1 1
+    Restart=on-failure
+    StandardOutput=journal
+    StandardError=journal
+
+    [Install]
+    WantedBy=multi-user.target
+
+⚠️ **Não esqueça de substituir** `/dev/input/eventX` pelo seu dispositivo correto!
+
+_Removi menção específica à EMEET para deixar mais genérico, já que pode funcionar com vários teclados. Também incluí `network.target` e saída para `journal` para facilitar o debug._
+
+### 3. Ative e inicie o serviço:
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable scrolllock-led.service
+    sudo systemctl start scrolllock-led.service
+
+### 4. Verifique o status do serviço:
+
+    systemctl status scrolllock-led.service
+
+---
+
+## 🧼 Desinstalação
+
+Se quiser remover tudo depois:
+
+    sudo systemctl stop scrolllock-led.service
+    sudo systemctl disable scrolllock-led.service
+    sudo rm /etc/systemd/system/scrolllock-led.service
+    sudo rm -rf /opt/scrolllock-wlroots-fix
+
+---
+
+## ✨ Créditos
+
+Essa solução nasceu da frustração com um LED apagado e do espírito “faça você mesmo” do Linux.
+
+Feito com carinho por **Silviodarko** (a.k.a. Riquelab), com a ajuda espiritual do ChatGPT e o apoio moral da comunidade Arch Linux 🐧.
+
+Se esse projeto te salvou, deixa uma estrela ⭐ no repositório e espalhe a vibe do Linux pelo mundão!
+
+🐧 **Viva o Linux!** 🦾
