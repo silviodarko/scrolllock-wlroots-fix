@@ -1,0 +1,11 @@
+[Unit]
+Description=Scroll Lock LED fix for EMEET Keyboard
+After=graphical.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/scrolllock-wlroots-workaround/ledToggler.py /dev/input/event4 scrolllock scrolllock 1 1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
