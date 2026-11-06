@@ -4,7 +4,7 @@ After=graphical.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /opt/scrolllock-wlroots-workaround/ledToggler.py /dev/input/event4 scrolllock scrolllock 1 1
+ExecStart=/usr/bin/python3 /opt/scrolllock-wlroots-fix/ledToggler.py /dev/input/eventX scrolllock scrolllock 1 1
 Restart=on-failure
 
 [Install]
