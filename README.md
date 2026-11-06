@@ -1,118 +1,55 @@
-# 💡 scrolllock-wlroots-fix
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-libevdev-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-Input_Devices-17233A?style=for-the-badge&logo=linux&logoColor=white"/>
+  <img alt="Status" src="https://img.shields.io/badge/Status-Community_Workaround-C9A86A?style=for-the-badge"/>
+</p>
 
-Fix para manter o LED do Scroll Lock aceso (ou piscando) em ambientes baseados em **wlroots** (Hyprland, Sway, etc.), que podem bugar o controle de LEDs de teclado em alguns modelos (ex: EMEET).
+# Scroll Lock LED | Linux Input Workaround
 
-Este script Python junto com um serviço **systemd** resolvem o problema, ativando junto com o sistema. Simples, direto e na moral.
+Projeto experimental em **Python + libevdev** para controlar o LED de teclados Linux quando o estado de Scroll Lock não acompanha o comportamento esperado em certas sessões Wayland.
 
----
+Feito para estudar eventos de entrada e solucionar uma situação real de periférico. **Não é uma modificação do compositor** e não depende de uma integração específica com Niri ou Noctalia.
 
-## 🧠 O Problema
+## Como funciona
 
-Alguns teclados (especialmente com layout ABNT ou teclas multimídia) podem ter o **LED do Scroll Lock inoperante** ao usar ambientes gráficos com **wlroots** (como Hyprland ou Sway).
+O script [ledToggler.py](./ledToggler.py) abre um dispositivo de eventos do Linux, identifica a funcionalidade de LED suportada pelo dispositivo e observa eventos de teclado para atualizar o indicador. A implementação pode permanecer executando enquanto acompanha os eventos.
 
-Em distribuições tipo Ubuntu, geralmente funciona bem. Mas em sistemas mais “crus” como Arch Linux, o LED pode simplesmente não acender, deixando a galera na mão.
+| Arquivo | Finalidade |
+| --- | --- |
+| [ledToggler.py](./ledToggler.py) | Leitura de eventos via libevdev e tentativa de controlar indicadores LED |
+| [scrolllock-led.service](./scrolllock-led.service) | Modelo de serviço systemd com caminho de instalação e dispositivo que **precisam ser conferidos** |
 
-Esse projeto oferece uma solução prática: um script que força o estado do LED no dispositivo correto e que é iniciado no boot via systemd.
+## Requisitos
 
----
+- Linux com interfaces de dispositivos de entrada compatíveis.
+- Python 3 e biblioteca Python **libevdev**.
+- Teclado expondo os eventos e indicadores LED necessários.
+- Permissão apropriada para o dispositivo selecionado.
 
-## ⚙️ O Que Este Script Faz
+**Importante:** dispositivos de entrada como /dev/input/event4 podem mudar após reinicialização ou reconexão. O exemplo de serviço contém **/dev/input/eventX como marcador que você deve substituir**; não o habilite sem identificar o dispositivo correto. Sempre que possível, prefira um caminho persistente existente sob /dev/input/by-id.
 
-- Detecta e se conecta ao evento do teclado (`/dev/input/eventX`).
-- Usa a biblioteca `python-libevdev` para forçar o Scroll Lock LED a acender.
-- Permite configurar o LED para piscar, se quiser (ótimo para debug).
-- Pode rodar em loop contínuo ou só realizar o toggle e sair — você escolhe.
+## Fluxo seguro de teste
 
----
-
-## 🚀 Instalação
-
-### 1. Instale a dependência:
-
-**No Arch/Manjaro:**
-
-    sudo pacman -S python-libevdev
-
-**No Debian/Ubuntu:**
-
-    sudo apt install python3-libevdev
-
-### 2. Clone o repositório:
+Primeiro, clone e inspecione os arquivos, sem instalar serviço algum:
 
     git clone https://github.com/silviodarko/scrolllock-wlroots-fix.git
     cd scrolllock-wlroots-fix
+    cat ledToggler.py
+    cat scrolllock-led.service
 
-### 3. Teste o script manualmente:
+Antes de qualquer execução, identifique seu teclado, confira as permissões e a presença de indicadores LED. A biblioteca libevdev não transforma um teclado incompatível em um dispositivo com suporte a LEDs.
 
-    sudo python3 ledToggler.py /dev/input/eventX scrolllock scrolllock 1 1
+Teste manualmente em sessão recuperável; apenas depois considere adaptar o serviço incluído. O serviço assume a cópia do script para **/opt/scrolllock-wlroots-fix/ledToggler.py**. Edite o dispositivo no ExecStart e revise os privilégios antes de ativar.
 
-⚠️ **Importante:** Troque `/dev/input/eventX` pelo identificador real do seu teclado (descubra com `sudo evtest` ou olhando em `/dev/input/by-id`).
+### Limitações conhecidas
 
----
+- A busca de LEDs no script pressupõe que a entrada correspondente exista em /sys/class/leds; dispositivos sem correspondência podem causar erro.
+- Alguns ambientes gráficos e teclados tratam o estado de Scroll Lock de forma diferente; **não há garantia universal**.
+- O projeto não inclui testes automatizados de compatibilidade com periféricos nem pacote oficial de distribuição.
+- Não deixe um leitor de eventos de teclado ativo sem compreender e confiar na implementação e nos privilégios exigidos.
 
-## 🛠️ Instalando como Serviço (systemd)
+## Outros projetos
 
-Para garantir que o fix rode automaticamente no boot:
+Desenvolvido por **[Sílvio Henrique](https://github.com/silviodarko)**. Confira também o [Radeon RX 580 Linux Stability Lab](https://github.com/silviodarko/rx580-linux-stability-fix) e o [roadmap público do SilvOS](https://github.com/silviodarko/silviodarko/blob/main/SILVOS_ROADMAP.md).
 
-### 1. Copie o script para o sistema:
-
-    sudo mkdir -p /opt/scrolllock-wlroots-fix
-    sudo cp ledToggler.py /opt/scrolllock-wlroots-fix/
-    sudo chmod +x /opt/scrolllock-wlroots-fix/ledToggler.py
-
-### 2. Crie o arquivo do serviço systemd:
-
-    sudo nano /etc/systemd/system/scrolllock-led.service
-
-Cole o conteúdo abaixo no arquivo aberto:
-
-    [Unit]
-    Description=Scroll Lock LED fix for Keyboard
-    After=graphical.target network.target
-
-    [Service]
-    Type=simple
-    ExecStart=/usr/bin/python3 /opt/scrolllock-wlroots-fix/ledToggler.py /dev/input/eventX scrolllock scrolllock 1 1
-    Restart=on-failure
-    StandardOutput=journal
-    StandardError=journal
-
-    [Install]
-    WantedBy=multi-user.target
-
-⚠️ **Não esqueça de substituir** `/dev/input/eventX` pelo seu dispositivo correto!
-
-_Removi menção específica à EMEET para deixar mais genérico, já que pode funcionar com vários teclados. Também incluí `network.target` e saída para `journal` para facilitar o debug._
-
-### 3. Ative e inicie o serviço:
-
-    sudo systemctl daemon-reload
-    sudo systemctl enable scrolllock-led.service
-    sudo systemctl start scrolllock-led.service
-
-### 4. Verifique o status do serviço:
-
-    systemctl status scrolllock-led.service
-
----
-
-## 🧼 Desinstalação
-
-Se quiser remover tudo depois:
-
-    sudo systemctl stop scrolllock-led.service
-    sudo systemctl disable scrolllock-led.service
-    sudo rm /etc/systemd/system/scrolllock-led.service
-    sudo rm -rf /opt/scrolllock-wlroots-fix
-
----
-
-## ✨ Créditos
-
-Essa solução nasceu da frustração com um LED apagado e do espírito “faça você mesmo” do Linux.
-
-Feito com carinho por **Silviodarko** (a.k.a. Riquelab), com a ajuda espiritual do ChatGPT e o apoio moral da comunidade Arch Linux 🐧.
-
-Se esse projeto te salvou, deixa uma estrela ⭐ no repositório e espalhe a vibe do Linux pelo mundão!
-
-🐧 **Viva o Linux!** 🦾
+Relatos de compatibilidade, propostas de correção e melhorias documentadas são bem-vindos.
